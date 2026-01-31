@@ -1,0 +1,87 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+  # R2DBC PostgreSQL Configuration
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/pdfutility_auth
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    pool:
+      initial-size: 5
+      max-size: 20
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # OAuth2 Configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: openid,profile,email
+          microsoft:
+            client-id: ${MICROSOFT_CLIENT_ID:}
+            client-secret: ${MICROSOFT_CLIENT_SECRET:}
+            scope: openid,profile,email
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJWTWhichShouldBeLongEnoughForHS512Algorithm123456789}
+  access-token-expiration: 3600000 # 1 hour
+  refresh-token-expiration: 604800000 # 7 days
+  issuer: pdf-utility-platform
+
+# Password Policy
+password:
+  min-length: 8
+  require-uppercase: true
+  require-lowercase: true
+  require-digit: true
+  require-special: true
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Logging
+logging:
+  level:
+    com.pdfutility: DEBUG
+    org.springframework.security: DEBUG
+
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,0 +1,139 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:8081"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+        # Auth Service Routes
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+            - name: CircuitBreaker
+              args:
+                name: authCircuitBreaker
+                fallbackUri: forward:/fallback/auth
+
+        # PDF Core Service Routes
+        - id: pdf-core-service
+          uri: ${PDF_CORE_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/pdf/**
+          filters:
+            - StripPrefix=0
+            - name: CircuitBreaker
+              args:
+                name: pdfCircuitBreaker
+                fallbackUri: forward:/fallback/pdf
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+
+        # Storage Service Routes
+        - id: storage-service
+          uri: ${STORAGE_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/files/**
+          filters:
+            - StripPrefix=0
+            - name: CircuitBreaker
+              args:
+                name: storageCircuitBreaker
+                fallbackUri: forward:/fallback/storage
+
+        # Swagger/OpenAPI Routes
+        - id: pdf-core-swagger
+          uri: ${PDF_CORE_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/pdf-service/api-docs/**
+          filters:
+            - RewritePath=/pdf-service/(?<segment>.*), /${segment}
+
+  # Redis Configuration for Rate Limiting
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJWTWhichShouldBeLongEnoughForHS512Algorithm123456789}
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# Resilience4j Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      authCircuitBreaker:
+        baseConfig: default
+      pdfCircuitBreaker:
+        baseConfig: default
+        slidingWindowSize: 20
+        waitDurationInOpenState: 30s
+      storageCircuitBreaker:
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 30s
+    instances:
+      pdfCircuitBreaker:
+        timeoutDuration: 120s
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: when_authorized
+    gateway:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.pdfutility: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG

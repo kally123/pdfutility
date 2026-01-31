@@ -1,0 +1,110 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: pdf-core-service
+
+  # R2DBC PostgreSQL Configuration (Reactive - Required for WebFlux)
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/pdfutility
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    pool:
+      initial-size: 10
+      max-size: 50
+      max-idle-time: 30m
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: pdf-core-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.pdfutility.*
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 500MB
+
+  # WebFlux Configuration
+  webflux:
+    multipart:
+      max-in-memory-size: 10MB
+      max-disk-usage-per-part: 100MB
+      max-parts: 20
+
+# PDF Processing Configuration
+pdf:
+  processing:
+    temp-directory: ${java.io.tmpdir}/pdfutility
+    max-merge-files: 50
+    max-file-size-mb: 100
+    compression:
+      default-level: MEDIUM
+      levels:
+        LOW:
+          image-quality: 0.9
+          dpi: 150
+        MEDIUM:
+          image-quality: 0.7
+          dpi: 100
+        HIGH:
+          image-quality: 0.5
+          dpi: 72
+
+# Storage Service Configuration
+storage:
+  service:
+    url: ${STORAGE_SERVICE_URL:http://localhost:8083}
+    timeout: 30s
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  health:
+    r2dbc:
+      enabled: true
+    redis:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.pdfutility: DEBUG
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
