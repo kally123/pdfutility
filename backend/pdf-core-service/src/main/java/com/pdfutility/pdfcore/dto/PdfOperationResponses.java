@@ -53,7 +53,7 @@ public final class PdfOperationResponses {
      * Response for PDF information.
      */
     @Value
-    @Builder
+    @Builder(toBuilder = true)
     public static class PdfInfoResponse {
         String fileId;
         String fileName;

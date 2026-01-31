@@ -8,7 +8,7 @@ import com.pdfutility.pdfcore.service.PdfMergeService;
 import com.pdfutility.pdfcore.service.StorageClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.io.MemoryUsageSetting;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -109,14 +108,13 @@ public class PdfMergeServiceImpl implements PdfMergeService {
                 ByteBuffer buffer = fileContents.get(i);
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
-                merger.addSource(new ByteArrayInputStream(bytes));
+                merger.addSource(new RandomAccessReadBuffer(bytes));
             }
 
             merger.setDestinationStream(outputStream);
 
-            // Merge with memory optimization
-            MemoryUsageSetting memorySettings = MemoryUsageSetting.setupMixed(100_000_000); // 100MB threshold
-            merger.mergeDocuments(memorySettings);
+            // Merge documents (PDFBox 3.x API)
+            merger.mergeDocuments(null);
 
             byte[] mergedBytes = outputStream.toByteArray();
             log.debug("Merged PDF size: {} bytes", mergedBytes.length);
