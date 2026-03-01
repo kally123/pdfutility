@@ -139,8 +139,8 @@ public class PdfCompressServiceImpl implements PdfCompressService {
             long compressedSize = compressedBytes.length;
             double ratio = 1.0 - ((double) compressedSize / originalSize);
             
-            log.info("Compression complete. Original: {} bytes, Compressed: {} bytes, Ratio: {:.2f}%",
-                    originalSize, compressedSize, ratio * 100);
+            log.info("Compression complete. Original: {} bytes, Compressed: {} bytes, Ratio: {}%",
+                    originalSize, compressedSize, String.format("%.2f", ratio * 100));
 
             return ByteBuffer.wrap(compressedBytes);
 
